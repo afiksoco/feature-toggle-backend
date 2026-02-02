@@ -1,11 +1,34 @@
 # Feature Toggle SDK
 
-A Feature Toggle SDK backend with FastAPI + Next.js admin portal, ready to deploy to Vercel with MongoDB Atlas.
+A complete Feature Toggle system with FastAPI backend, Next.js admin portal, and Android SDK.
+
+## Live Demo
+
+| Service | URL |
+|---------|-----|
+| **Admin Portal** | https://admin-five-drab-87.vercel.app |
+| **API** | https://api-jade-two-62.vercel.app |
+| **API Docs** | https://api-jade-two-62.vercel.app/docs |
+| **Android SDK (JitPack)** | https://jitpack.io/#afiksoco/feature-toggle-android-sdk |
+
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Admin Portal   │────▶│   FastAPI API   │────▶│  MongoDB Atlas  │
+│   (Next.js)     │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                               ▲
+                               │
+                        ┌──────┴──────┐
+                        │ Android SDK │
+                        │  (Kotlin)   │
+                        └─────────────┘
+```
 
 ## Project Structure
 
 ```
-seminar_backend/
 ├── api/                          # FastAPI backend
 │   ├── app/
 │   │   ├── main.py              # FastAPI entry point
@@ -21,65 +44,71 @@ seminar_backend/
 │   │   ├── components/          # React components
 │   │   └── lib/                 # API client
 │   └── package.json
-├── vercel.json                  # Vercel deployment config
-└── pyproject.toml
+└── android-sdk/                  # Android SDK + Sample App
+    ├── feature-toggle-sdk/      # The SDK library
+    └── sample/                  # Demo app
 ```
 
-## Quick Start
+## Android SDK Usage
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- MongoDB (local or Atlas)
-
-### Backend Setup
-
-```bash
-# Install dependencies
-cd api
-pip install -r requirements.txt
-
-# Set environment variables
-cp ../.env.example ../.env
-# Edit .env with your MongoDB connection string
-
-# Run the server
-uvicorn app.main:app --reload
+Add JitPack to your `settings.gradle.kts`:
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
 ```
 
-### Admin Portal Setup
+Add the dependency:
+```kotlin
+implementation("com.github.afiksoco:feature-toggle-android-sdk:v1.0.0")
+```
 
-```bash
-# Install dependencies
-cd admin
-npm install
+Use in your app:
+```kotlin
+// Initialize in Application.onCreate()
+FeatureToggle.initialize(
+    context = this,
+    config = FeatureToggleConfig(
+        appId = "com.example.myapp",
+        apiUrl = "https://api-jade-two-62.vercel.app"
+    )
+)
 
-# Run the dev server
-npm run dev
+// Set user ID
+FeatureToggle.setUserId("user123")
+
+// Check features
+if (FeatureToggle.isEnabled("dark_mode")) {
+    enableDarkMode()
+}
 ```
 
 ## API Endpoints
 
-### Admin Endpoints (for portal)
+### Admin Endpoints
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/admin/features` | Create new feature |
-| GET | `/api/admin/features` | List all features |
+| GET | `/api/admin/features?app_id=xxx` | List features (filter by app) |
 | GET | `/api/admin/features/{id}` | Get feature by ID |
 | PUT | `/api/admin/features/{id}` | Update feature |
 | DELETE | `/api/admin/features/{id}` | Delete feature |
 
-### SDK Endpoints (for mobile apps)
+### SDK Endpoints
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/sdk/features` | Get all active features |
-| GET | `/api/sdk/features/{key}` | Check if specific feature is enabled |
-| POST | `/api/sdk/evaluate` | Evaluate features for user (handles percentage rollout) |
+| GET | `/api/sdk/features?app_id=xxx` | Get active features for app |
+| POST | `/api/sdk/evaluate` | Evaluate features for user |
 
 ## Feature Schema
 
 ```json
 {
+  "app_id": "com.example.myapp",
   "key": "dark_mode",
   "name": "Dark Mode",
   "description": "Enable dark mode theme",
@@ -90,32 +119,35 @@ npm run dev
 }
 ```
 
-## Percentage Rollout
+## Key Features
 
-The SDK uses consistent hashing to ensure users always get the same result for percentage-based rollouts. Use the `/api/sdk/evaluate` endpoint with a `user_id` to check feature availability:
+- **Multi-App Support** - Each app has isolated features
+- **Percentage Rollout** - Gradual feature releases (consistent hashing)
+- **Date Scheduling** - Start/end dates for features
+- **Real-time Toggle** - No app update needed to enable/disable
+- **Admin Portal** - Easy-to-use web interface
 
+## Local Development
+
+### Backend
 ```bash
-curl -X POST http://localhost:8000/api/sdk/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123", "feature_keys": ["dark_mode"]}'
+cd api
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-## Deployment to Vercel
-
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Set environment variables in Vercel:
-   - `MONGODB_URL`
-   - `DATABASE_NAME`
-   - `CORS_ORIGINS`
-   - `NEXT_PUBLIC_API_URL`
-4. Deploy
+### Admin Portal
+```bash
+cd admin
+npm install
+npm run dev
+```
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGODB_URL` | MongoDB connection string | `mongodb+srv://...` |
-| `DATABASE_NAME` | Database name | `feature_toggle` |
-| `CORS_ORIGINS` | Allowed origins (JSON array) | `["http://localhost:3000"]` |
-| `NEXT_PUBLIC_API_URL` | API URL for frontend | `https://api.example.com` |
+| Variable | Description |
+|----------|-------------|
+| `MONGODB_URL` | MongoDB connection string |
+| `DATABASE_NAME` | Database name (default: `feature_toggle`) |
+| `CORS_ORIGINS` | Allowed origins JSON array |
+| `NEXT_PUBLIC_API_URL` | API URL for frontend |
