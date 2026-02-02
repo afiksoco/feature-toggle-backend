@@ -23,3 +23,10 @@ Thumbs.db
 
 # Vercel
 .vercel/
+.vercel
+
+# Android SDK build artifacts
+android-sdk/.gradle/
+android-sdk/build/
+android-sdk/*/build/
+android-sdk/local.properties
